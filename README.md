@@ -1,4 +1,4 @@
-# Lueur
+# RyDM
 
 **Notice small shifts in your own rhythm early, and reach the right person at your own pace.**
 Geneva {ai} Hackathon 2026 · AGPsy challenge (Association Genevoise des Psychologues).
