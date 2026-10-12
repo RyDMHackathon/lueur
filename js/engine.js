@@ -166,7 +166,7 @@ export function stateCopy(result) {
   if (result.learning) return {
     cls: "learning",
     title: "Getting to know your rhythm",
-    sub: `Lueur needs about ${CONFIG.minDaysForBaseline} days to learn what is usual for you. Day ${Math.min(result.learnedDays, CONFIG.minDaysForBaseline)} of ${CONFIG.minDaysForBaseline}.`,
+    sub: `RyDM needs about ${CONFIG.minDaysForBaseline} days to learn what is usual for you. Day ${Math.min(result.learnedDays, CONFIG.minDaysForBaseline)} of ${CONFIG.minDaysForBaseline}.`,
   };
   if (result.level === 2) return {
     cls: "s2",
@@ -178,13 +178,13 @@ export function stateCopy(result) {
     title: "Something has shifted a little",
     sub: "One part of your rhythm looks different from your usual lately. Nothing to fix, just worth noticing.",
   };
-  return { cls: "", title: "Your rhythm looks steady", sub: "Things look close to your usual. Lueur keeps quietly watching, only on this phone." };
+  return { cls: "", title: "Your rhythm looks steady", sub: "Things look close to your usual. RyDM keeps quietly watching, only on this phone." };
 }
 
 // The one-page summary a person can choose to share. Behaviour only, no labels, no diagnosis.
 export function buildSummary(result, name) {
   const lines = [];
-  lines.push(`${name ? name + "'s" : "My"} Lueur summary`);
+  lines.push(`${name ? name + "'s" : "My"} RyDM summary`);
   if (result.window) lines.push(`Period: ${result.window.from} to ${result.window.to}, compared with ${result.window.baseFrom} to ${result.window.baseTo}.`);
   lines.push("");
   lines.push("What changed compared with my usual:");
@@ -194,6 +194,6 @@ export function buildSummary(result, name) {
   if (steady.length) lines.push(`Steady: ${steady.join(", ")}.`);
   if (result.excludedDays) lines.push(`${result.excludedDays} day(s) were left out because I tagged them (travel, illness, etc.).`);
   lines.push("");
-  lines.push("This is not a diagnosis. Lueur compares me only with my own usual patterns, and I chose to share this.");
+  lines.push("This is not a diagnosis. RyDM compares me only with my own usual patterns, and I chose to share this.");
   return lines.join("\n");
 }

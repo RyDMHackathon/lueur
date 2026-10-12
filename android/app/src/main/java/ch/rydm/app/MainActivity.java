@@ -1,4 +1,4 @@
-package ch.lueur.app;
+package ch.rydm.app;
 
 import android.os.Bundle;
 import com.getcapacitor.BridgeActivity;
@@ -6,7 +6,7 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        registerPlugin(LueurHealthPlugin.class);
+        registerPlugin(RyDMHealthPlugin.class);
         super.onCreate(savedInstanceState);
         DailyWorker.Companion.schedule(this);
     }

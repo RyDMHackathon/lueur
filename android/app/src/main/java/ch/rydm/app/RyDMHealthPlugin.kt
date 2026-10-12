@@ -1,4 +1,4 @@
-package ch.lueur.app
+package ch.rydm.app
 
 import android.Manifest
 import android.content.Intent
@@ -24,14 +24,14 @@ import kotlinx.coroutines.launch
 
 /** Bridge between the web UI (js/native.js) and the on-device collectors. Nothing here uses the network. */
 @CapacitorPlugin(
-    name = "LueurHealth",
+    name = "RyDMHealth",
     permissions = [
         Permission(alias = "notifications", strings = [Manifest.permission.POST_NOTIFICATIONS]),
         Permission(alias = "activity", strings = [Manifest.permission.ACTIVITY_RECOGNITION]),
         Permission(alias = "location", strings = [Manifest.permission.ACCESS_COARSE_LOCATION]),
     ]
 )
-class LueurHealthPlugin : Plugin() {
+class RyDMHealthPlugin : Plugin() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val contract = PermissionController.createRequestPermissionResultContract()
 
@@ -169,7 +169,7 @@ class LueurHealthPlugin : Plugin() {
     /** The web app tells the background check about snoozes and whether notes are wanted. */
     @PluginMethod
     fun setPrefs(call: PluginCall) {
-        val e = context.getSharedPreferences("lueur", android.content.Context.MODE_PRIVATE).edit()
+        val e = context.getSharedPreferences("rydm", android.content.Context.MODE_PRIVATE).edit()
         call.getString("snoozeUntil")?.let { e.putString("snoozeUntil", it) }
         call.getBoolean("notify")?.let { e.putBoolean("notify", it) }
         e.apply()

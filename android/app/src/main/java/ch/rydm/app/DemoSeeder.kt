@@ -1,4 +1,4 @@
-package ch.lueur.app
+package ch.rydm.app
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
@@ -15,7 +15,7 @@ import kotlin.random.Random
 
 /**
  * Debug builds only. Writes six weeks of sample steps and sleep into Health Connect, with the
- * same "gradual shift" pattern as js/demo.js, so the full band -> Health Connect -> Lueur path
+ * same "gradual shift" pattern as js/demo.js, so the full band -> Health Connect -> RyDM path
  * can be shown on a phone or emulator without a real wearable.
  */
 object DemoSeeder {
@@ -56,7 +56,7 @@ object DemoSeeder {
             )
         }
         client.insertRecords(records)
-        // location numbers go straight into Lueur's own store (Health Connect has no such record)
+        // location numbers go straight into RyDM's own store (Health Connect has no such record)
         val store = Collector.load(ctx)
         for (i in days downTo 1) {
             val day = today.minusDays(i.toLong())

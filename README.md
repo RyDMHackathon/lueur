@@ -3,9 +3,9 @@
 **Notice small shifts in your own rhythm early, and reach the right person at your own pace.**
 Geneva {ai} Hackathon 2026 · AGPsy challenge (Association Genevoise des Psychologues).
 
-Lueur is a mobile web app (PWA) that learns a person's *own* usual pattern of sleep, movement, places and mood. When several of those drift away from the usual for most of two weeks, it says so kindly and offers a graduated, user-controlled path to support: keep an eye on it, share with a trusted person, or talk to a professional. Everything runs on the phone. There is no server.
+RyDM is a mobile web app (PWA) that learns a person's *own* usual pattern of sleep, movement, places and mood. When several of those drift away from the usual for most of two weeks, it says so kindly and offers a graduated, user-controlled path to support: keep an eye on it, share with a trusted person, or talk to a professional. Everything runs on the phone. There is no server.
 
-> Lueur is a general wellbeing tool. It does not diagnose, screen for, monitor or predict any disease, and it is not a medical device. See [COMPLIANCE.md](COMPLIANCE.md).
+> RyDM is a general wellbeing tool. It does not diagnose, screen for, monitor or predict any disease, and it is not a medical device. See [COMPLIANCE.md](COMPLIANCE.md).
 
 ## Run it
 
@@ -23,7 +23,7 @@ No build step and no dependencies: plain HTML, CSS and ES modules.
 |---|---|
 | `js/engine.js` | Baseline-drift engine. Deterministic, explainable, no ML deciding risk. |
 | `js/slm.js` | Optional on-device language model (WebLLM + WebGPU) that only rephrases, behind a validator. |
-| `js/importers.js` | Fitbit (Kaggle CSV, Google Takeout JSON), Apple Health `export.xml` (streamed), Lueur CSV. All parsed on the device. |
+| `js/importers.js` | Fitbit (Kaggle CSV, Google Takeout JSON), Apple Health `export.xml` (streamed), RyDM CSV. All parsed on the device. |
 | `js/sensing.js` | Places: coordinates are rounded, salted and hashed, then discarded; only a daily count is kept. |
 | `js/demo.js` | Two synthetic personas ("gradual shift", "steady rhythm") with a fixed seed. |
 | `js/store.js` | IndexedDB storage, export, delete-everything, six-month retention. |
@@ -63,7 +63,7 @@ For each signal (sleep duration, bedtime, sleep regularity, steps, places, mood 
 - The weights are downloaded once from Hugging Face and cached; after that it works offline.
 - **The model never decides anything.** It is told only *which areas* changed (for example "later bedtimes, less movement"). It never sees numbers, names, dates or raw data.
 - Its reply is validated before anyone sees it: no digits, no markdown or placeholders, no clinical words, no claims that anything "improved", and it must mention the areas it was given.
-- If validation fails three times, Lueur shows its fixed wording instead.
+- If validation fails three times, RyDM shows its fixed wording instead.
 - See [Model results](#model-results) for how the two models fared against the validator.
 - **Swiss roadmap:** Apertus (ETH/EPFL/CSCS) has 0.5B and 1.5B instruct models under Apache-2.0. There is no WebLLM/ONNX build yet; converting one is the natural next step.
 
@@ -77,18 +77,18 @@ For each signal (sleep duration, bedtime, sleep regularity, steps, places, mood 
 - **For validation later:**
   - GLOBEM (PhysioNet, credentialed; weekly PHQ-4 labels).
   - LifeSnaps (Zenodo 7229547, CC BY 4.0) for calibrating within-person variability.
-  - No open, login-free dataset has depression labels, so Lueur claims only "change from your own usual", never clinical accuracy.
+  - No open, login-free dataset has depression labels, so RyDM claims only "change from your own usual", never clinical accuracy.
 
 ## Android app (passive)
 
-The same web app, wrapped with Capacitor 8, plus a small Kotlin layer in `android/app/src/main/java/ch/lueur/app/`:
+The same web app, wrapped with Capacitor 8, plus a small Kotlin layer in `android/app/src/main/java/ch/rydm/app/`:
 
 | File | Job |
 |---|---|
 | `Collector.kt` | Reads **Health Connect** (steps and sleep only, read-only), so any band that syncs there works: Fitbit, Samsung, Oura, Withings, Xiaomi and others. Without a wearable, it estimates sleep from the **screen's night-time off/on pattern** (Usage access; only screen on/off times, never app content) and reads **steps from the phone's own step counter**. A real tracker always wins over the phone's estimate. |
 | `DailyWorker.kt` | WorkManager job, about hourly: samples the step counter; once a day collects; once a day after 10:00 checks for a sustained shift and shows **at most one silent notification a week**. It never names a condition and never contacts anyone. |
 | `DriftCheck.kt` | The same rules as `engine.js` (sensor signals only). Verified to agree with the JS engine on the same data. |
-| `LueurHealthPlugin.kt` | The bridge the web UI calls (`js/native.js`). |
+| `RyDMHealthPlugin.kt` | The bridge the web UI calls (`js/native.js`). |
 | `DemoSeeder.kt` | **Debug builds only**: writes 6 weeks of sample steps and sleep into Health Connect so the whole path can be demoed without a wearable. Release builds have no write permission. |
 
 Build (needs JDK 21, Android SDK 36, Node 22+):
@@ -103,7 +103,7 @@ The APK lands in `android/app/build/outputs/apk/debug/app-debug.apk`. Install wi
 
 Tested on the Android 15 emulator:
 - Health Connect's own permission screens list exactly **Sleep** and **Steps**, then ask for past data.
-- Sample data flows from Health Connect into Lueur, and the engine flags the shift.
+- Sample data flows from Health Connect into RyDM, and the engine flags the shift.
 - The native check and the JS engine agree (3 shifted signals).
 - The notification lands in Android's **Silent** section.
 
@@ -111,7 +111,7 @@ Not yet verified: the screen-pattern sleep estimate needs a real phone left over
 
 ## iPhone app (passive, Apple Health)
 
-Same web app, wrapped with Capacitor 8 (Swift Package Manager, no CocoaPods). The Swift layer lives in `ios/App/App/LueurHealthPlugin.swift`.
+Same web app, wrapped with Capacitor 8 (Swift Package Manager, no CocoaPods). The Swift layer lives in `ios/App/App/RyDMHealthPlugin.swift`.
 
 **What it reads from Apple Health** (read-only; iOS shows a per-type permission sheet):
 
@@ -126,13 +126,13 @@ Same web app, wrapped with Capacitor 8 (Swift Package Manager, no CocoaPods). Th
 | State of Mind moods logged in Health (iOS 18+) | No | Used as a check-in when the person didn't check in here |
 
 **Deliberately not read:**
-- **PHQ-9 / GAD-7 scores** (HKScoredAssessment, iOS 18). These are clinical screening instruments. Reading them would make Lueur depression-screening software, which is a medical device.
+- **PHQ-9 / GAD-7 scores** (HKScoredAssessment, iOS 18). These are clinical screening instruments. Reading them would make RyDM depression-screening software, which is a medical device.
 - **Respiratory rate** and **wrist temperature**. Drift in these mostly signals illness, so a flag would look like a medical alert.
 - **Screen Time**. Apple doesn't expose it to apps as numbers.
 
 **Background:**
 - `HKObserverQuery` plus `enableBackgroundDelivery(.daily)` on sleep and steps. This needs the `com.apple.developer.healthkit.background-delivery` entitlement.
-- When new data arrives, the Swift port of the rules (`LueurDrift`) runs.
+- When new data arrives, the Swift port of the rules (`RyDMDrift`) runs.
 - At most once a week it posts a **passive** local notification: no sound, no banner.
 
 **Demo build:** the Privacy tab has "fill Apple Health with 6 weeks of sample data". It writes steps, sleep, resting HR, HRV and State of Mind. HealthKit refuses app writes for exercise minutes and time in daylight, since those are Watch-only.
@@ -150,13 +150,13 @@ cd ios/App && xcodebuild -project App.xcodeproj -scheme App -sdk iphonesimulator
 
 Tested on the iPhone 17 Pro simulator (iOS 26):
 - Apple's Health sheet lists each type.
-- Sample data flows into Lueur and flags 7 shifted signals.
+- Sample data flows into RyDM and flags 7 shifted signals.
 - "Why am I seeing this?" lists each one in plain words.
 
 ## Past places from Google Maps Timeline
 
-No app can read Google Timeline: since 2024 it lives only on the phone and has no API. Lueur offers a 30-second hand-over instead: **Privacy → Past places → Add**.
-- **Android:** Lueur opens Timeline settings, the person taps *Export Timeline data*, then picks the file.
+No app can read Google Timeline: since 2024 it lives only on the phone and has no API. RyDM offers a 30-second hand-over instead: **Privacy → Past places → Add**.
+- **Android:** RyDM opens Timeline settings, the person taps *Export Timeline data*, then picks the file.
 - **iPhone:** Google Maps › Your Timeline › Export.
 
 `fromTimeline()` in `js/importers.js` reads all three formats:
@@ -168,7 +168,7 @@ Each day is reduced to places, % of the day at home and range (Google's HOME lab
 
 ## Limits a browser imposes
 
-A web page cannot sense in the background and cannot read screen time or sleep directly. Lueur therefore:
+A web page cannot sense in the background and cannot read screen time or sleep directly. RyDM therefore:
 - imports sleep and steps from the person's tracker export,
 - counts places only while it is open,
 - asks for a ten-second daily check-in.

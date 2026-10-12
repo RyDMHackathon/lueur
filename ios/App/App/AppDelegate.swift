@@ -7,10 +7,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Re-arm the Health observers so iOS can wake Lueur when new sleep or steps arrive.
-        LueurNotes.startBackgroundDelivery()
+        // Re-arm the Health observers so iOS can wake RyDM when new sleep or steps arrive.
+        RyDMNotes.startBackgroundDelivery()
         // iOS relaunches the app for visits / big moves; restart monitoring so none are lost.
-        LueurLocation.shared.start()
+        RyDMLocation.shared.start()
         return true
     }
 

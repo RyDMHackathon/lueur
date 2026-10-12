@@ -56,7 +56,7 @@ export function detectFitbitKaggle(name, rows) {
   if (k.includes("ActivityDate") && k.includes("TotalSteps")) return "activity";
   if (k.includes("SleepDay") && k.includes("TotalMinutesAsleep")) return "sleepDay";
   if (k.includes("logId") && k.includes("value") && k.includes("date")) return "minuteSleep";
-  if (k.includes("date") && (k.includes("sleep_minutes") || k.includes("steps") || k.includes("mood"))) return "lueur";
+  if (k.includes("date") && (k.includes("sleep_minutes") || k.includes("steps") || k.includes("mood"))) return "rydm";
   return null;
 }
 
@@ -102,9 +102,9 @@ export function fromFitbitKaggle(files, id) {
   return [...days.values()].sort((a, b) => a.date.localeCompare(b.date));
 }
 
-// ---------- 2. Lueur template CSV ----------
+// ---------- 2. RyDM template CSV ----------
 // date, sleep_minutes, bedtime (HH:MM), steps, places, mood (1-5), energy (1-5)
-export function fromLueurCSV(rows) {
+export function fromRyDMCSV(rows) {
   return rows.map(r => {
     const d = { date: r.date, source: "csv" };
     if (r.sleep_minutes) d.sleepMin = +r.sleep_minutes;

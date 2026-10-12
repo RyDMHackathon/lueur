@@ -1,4 +1,4 @@
-package ch.lueur.app
+package ch.rydm.app
 
 import android.Manifest
 import android.app.NotificationChannel
@@ -31,7 +31,7 @@ class DailyWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx,
 
     override suspend fun doWork(): Result {
         val ctx = applicationContext
-        val prefs = ctx.getSharedPreferences("lueur", Context.MODE_PRIVATE)
+        val prefs = ctx.getSharedPreferences("rydm", Context.MODE_PRIVATE)
         if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED) {
             runCatching { Collector.sampleStepCounter(ctx) }
         }
@@ -49,7 +49,7 @@ class DailyWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx,
     }
 
     private fun maybeNotify(ctx: Context) {
-        val prefs = ctx.getSharedPreferences("lueur", Context.MODE_PRIVATE)
+        val prefs = ctx.getSharedPreferences("rydm", Context.MODE_PRIVATE)
         if (!prefs.getBoolean("notify", true)) return
         val today = LocalDate.now()
         prefs.getString("snoozeUntil", null)?.let { if (LocalDate.parse(it) > today) return }
@@ -65,7 +65,7 @@ class DailyWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx,
 
         fun schedule(ctx: Context) {
             val req = PeriodicWorkRequestBuilder<DailyWorker>(1, TimeUnit.HOURS).build()
-            WorkManager.getInstance(ctx).enqueueUniquePeriodicWork("lueur-daily", ExistingPeriodicWorkPolicy.KEEP, req)
+            WorkManager.getInstance(ctx).enqueueUniquePeriodicWork("rydm-daily", ExistingPeriodicWorkPolicy.KEEP, req)
         }
 
         fun show(ctx: Context, title: String, text: String) {
@@ -80,7 +80,7 @@ class DailyWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx,
                 Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             val n = NotificationCompat.Builder(ctx, CHANNEL)
-                .setSmallIcon(R.drawable.ic_stat_lueur)
+                .setSmallIcon(R.drawable.ic_stat_rydm)
                 .setContentTitle(title)
                 .setContentText(text)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(text))

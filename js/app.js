@@ -1,7 +1,7 @@
 import { kv, allDays, putDays, upsertDay, getDay, clearDays, wipeAll, exportAll, prune, RETENTION_DAYS } from "./store.js";
 import { analyze, stateCopy, buildSummary, SIGNALS, CONFIG, CONTEXT_TAGS, isoDate, addDays, fmtDur, fmtClock } from "./engine.js";
 import { generate, PERSONAS } from "./demo.js";
-import { parseCSV, detectFitbitKaggle, fitbitIds, fromFitbitKaggle, fromLueurCSV, fromFitbitTakeout, fromAppleHealth, TEMPLATE_CSV, isTimeline, fromTimeline } from "./importers.js";
+import { parseCSV, detectFitbitKaggle, fitbitIds, fromFitbitKaggle, fromRyDMCSV, fromFitbitTakeout, fromAppleHealth, TEMPLATE_CSV, isTimeline, fromTimeline } from "./importers.js";
 import { startPlaces, stopPlaces } from "./sensing.js";
 import { isNative, native, platform } from "./native.js";
 import { MODELS, hasWebGPU, loadModel, isLoaded, loadedModel, aiMessage, templateMessage, attempts } from "./slm.js";
@@ -132,8 +132,8 @@ function connectRows() {
     return `${row("Apple Health", s.health === "available"
         ? "Steps (every iPhone counts them), plus sleep, active minutes, resting heart rate, heart rate variability and time in daylight from an Apple Watch or any app that writes to Health, and moods you log in Health. Read-only. iOS lets you choose each one."
         : "Apple Health isn't available on this device.", s.healthRequested ? "Asked" : false, "nConnectHC", "Connect")}
-      ${row("Places and time at home", "iOS tells Lueur when you arrive at or leave a place. Each day becomes three numbers (places, time at home, how far you ranged) and the locations are deleted. Choose <b>Always</b> when asked.", s.locationAlways ? true : s.location ? "While using" : false, "nLocation", "Allow")}
-      ${row("Past places (optional)", "Bring in your Google Maps Timeline so Lueur knows your usual from day one. You export it; Lueur keeps only daily numbers.", false, "pastPlaces", "Add")}
+      ${row("Places and time at home", "iOS tells RyDM when you arrive at or leave a place. Each day becomes three numbers (places, time at home, how far you ranged) and the locations are deleted. Choose <b>Always</b> when asked.", s.locationAlways ? true : s.location ? "While using" : false, "nLocation", "Allow")}
+      ${row("Past places (optional)", "Bring in your Google Maps Timeline so RyDM knows your usual from day one. You export it; RyDM keeps only daily numbers.", false, "pastPlaces", "Add")}
       ${row("Gentle notes", "At most one quiet note a week, delivered silently to Notification Center.", s.notifications, "nNotify", "Allow")}`;
   }
   const row = (title, desc, ok, act, label) => `<div class="toggle-row"><div class="txt"><b>${title}</b><span class="small muted">${desc}</span></div>
@@ -145,14 +145,14 @@ function connectRows() {
     ${row("Sleep, without a wearable", "Estimates your night from how long the screen stays off. Android calls this Usage access; only screen on/off times are read, never app content.", s.usageAccess, "nUsage", "Open settings")}
     ${s.stepSensor ? row("Steps, from this phone", "Uses the phone's own step counter, checked about once an hour.", s.activity, "nActivity", "Allow") : ""}
     ${row("Places and time at home", "A coarse location about once an hour. Each day becomes three numbers (places, time at home, how far you ranged) and the locations are deleted. Choose <b>Allow all the time</b> on the next screen.", s.locationAlways ? true : false, "nLocation", s.location ? "Allow all the time" : "Allow")}
-    ${row("Past places (optional)", "Bring in your Google Maps Timeline so Lueur knows your usual from day one. You export it; Lueur keeps only daily numbers.", false, "pastPlaces", "Add")}
+    ${row("Past places (optional)", "Bring in your Google Maps Timeline so RyDM knows your usual from day one. You export it; RyDM keeps only daily numbers.", false, "pastPlaces", "Add")}
     ${row("Gentle notes", "At most one quiet notification a week, only after a shift that lasts. No sound.", s.notifications, "nNotify", "Allow")}`;
 }
 
 // ---------------- screens ----------------
 function topbar() {
   return `<div class="topbar">
-    <div class="brand"><span class="brand-dot" aria-hidden="true"></span>Lueur</div>
+    <div class="brand"><span class="brand-dot" aria-hidden="true"></span>RyDM</div>
     <button class="help-pill" data-act="help">${I.heart} Talk to someone now</button>
   </div>`;
 }
@@ -205,13 +205,13 @@ function todayScreen() {
     <div class="card">
       <p class="msg">${esc(S.message?.text || "")}</p>
       <div class="row between wrap">
-        <span class="ai-tag">${S.message?.ai ? `${I.spark} Written by the AI on this phone. It can be wrong.` : "Lueur's own words"}</span>
+        <span class="ai-tag">${S.message?.ai ? `${I.spark} Written by the AI on this phone. It can be wrong.` : "RyDM's own words"}</span>
         ${!r.learning && r.facts.length ? `<button class="linkbtn small" data-act="why">Why am I seeing this?</button>` : ""}
       </div>
     </div>
 
     ${needCheckin ? `<button class="card lilac" data-act="checkin" style="text-align:left;border:0;font:inherit;color:inherit;cursor:pointer">
-      <p class="eyebrow">Ten seconds</p><h3>How are you today?</h3><p class="small muted">Two taps: mood and energy. It helps Lueur notice what sensors can't.</p></button>` : ""}
+      <p class="eyebrow">Ten seconds</p><h3>How are you today?</h3><p class="small muted">Two taps: mood and energy. It helps RyDM notice what sensors can't.</p></button>` : ""}
 
     ${r.level >= 2 && !(S.settings.snoozeUntil && S.settings.snoozeUntil > today()) ? `<div class="card dawn">
       <p class="eyebrow">When you feel ready</p>
@@ -254,15 +254,15 @@ function rhythmScreen() {
       <p class="muted">Each line is you, compared only with you. The shaded band is your usual range from the four weeks before the last two.</p>
       <div class="legend"><span><i style="background:var(--lake-soft)"></i>Your usual range</span><span><i style="background:var(--surface-2);border:1px solid var(--line)"></i>Last 14 days</span><span><i style="background:var(--line)"></i>Tagged day</span></div>
     </div>
-    ${r.learning ? `<div class="card lilac"><h3>Still learning</h3><p class="small">Lueur has ${r.learnedDays} of ${CONFIG.minDaysForBaseline} days it needs before comparing anything.</p></div>` : ""}
+    ${r.learning ? `<div class="card lilac"><h3>Still learning</h3><p class="small">RyDM has ${r.learnedDays} of ${CONFIG.minDaysForBaseline} days it needs before comparing anything.</p></div>` : ""}
     ${sigs.map(s => `<div class="card">
       <div class="row between"><h3>${esc(s.label)}</h3><span class="ai-tag">${s.status === "shift" ? "Shifted" : s.status === "mild" ? "A little different" : s.status === "learning" ? "Learning" : "Steady"}</span></div>
       ${bigChart(s)}
       ${s.status !== "learning" ? `<p class="small muted">Off your usual on ${s.offDays || 0} of the last ${s.nRecent} days. ${s.status === "shift" || s.status === "mild" ? "" : "Within your normal ups and downs."}</p>` : ""}
     </div>`).join("")}
-    <details class="card soft"><summary><b>How Lueur decides</b></summary>
+    <details class="card soft"><summary><b>How RyDM decides</b></summary>
       <div class="stack small" style="margin-top:10px">
-        <p>Lueur never compares you with other people. For each signal it learns your usual level and your usual day-to-day wobble (median and median absolute deviation) from the four weeks before the last two.</p>
+        <p>RyDM never compares you with other people. For each signal it learns your usual level and your usual day-to-day wobble (median and median absolute deviation) from the four weeks before the last two.</p>
         <p>A day counts as "off" when it is more than ${CONFIG.zFlag} of your own usual wobbles away in the less helpful direction. A signal has <b>shifted</b> when it was off on at least ${CONFIG.persistShift * 100}% of the last 14 days and the last week's middle value is clearly off too. Tagged days are left out.</p>
         <p>The gentle suggestion to reach out only appears when three signals have shifted, or two including your own check-ins. These are fixed rules, written down here, not a black box. The AI only rewrites the result in kinder words.</p>
         <p>Based on Wang et al. 2018 (IMWUT), Fang et al. 2021 (npj Digital Medicine), Benasi et al. 2021 and the ICD-11 two-week convention.</p>
@@ -280,7 +280,7 @@ function circleScreen() {
       <p class="muted">Nothing is ever sent automatically. Each step is your choice, and you can stop at any one.</p></div>
     <div class="ladder">
       <div class="step"><span class="n">1</span><div class="stack"><h3>Keep an eye on it</h3>
-        <p class="small muted">Carry on as you are. Lueur will keep noticing, and try a small step when it suits you.</p>
+        <p class="small muted">Carry on as you are. RyDM will keep noticing, and try a small step when it suits you.</p>
         <button class="btn ghost" data-act="snooze">Remind me in a few days</button></div></div>
 
       <div class="step s2"><span class="n">2</span><div class="stack"><h3>Share with ${t.name ? esc(t.name) : "someone you trust"}</h3>
@@ -311,18 +311,18 @@ function privacyScreen() {
   return `${topbar()}
   <div class="stack-lg">
     <div class="stack"><h1>Your data stays here</h1>
-      <p class="muted">Lueur has no server and no account. Everything below lives only ${isNative ? "inside this app" : "in this browser"} on this phone.</p></div>
+      <p class="muted">RyDM has no server and no account. Everything below lives only ${isNative ? "inside this app" : "in this browser"} on this phone.</p></div>
     <div class="card"><dl class="kv"><dt>Days stored</dt><dd>${counts.days}</dd><dt>Nights of sleep</dt><dd>${counts.withSleep}</dd><dt>Check-ins</dt><dd>${counts.withCheckin}</dd><dt>Places</dt><dd>Only a daily count; never coordinates</dd><dt>Consent given</dt><dd>${c.agreedAt ? esc(new Date(c.agreedAt).toLocaleDateString("en-CH")) : "Not yet"}</dd></dl></div>
 
     ${isNative ? `<div class="card"><div class="row between"><h3>On this phone</h3><button class="linkbtn small" data-act="nSync">Sync now</button></div>
-      <p class="small muted">Read-only. Lueur never writes to ${platform === "ios" ? "Apple Health" : "Health Connect"} and never sends anything off the phone.</p>${connectRows()}
+      <p class="small muted">Read-only. RyDM never writes to ${platform === "ios" ? "Apple Health" : "Health Connect"} and never sends anything off the phone.</p>${connectRows()}
       ${S.nativeStatus?.notifications ? `<button class="linkbtn small" data-act="nPreview">Show what a note looks like</button>` : ""}
       ${S.nativeStatus?.debug && (S.nativeStatus?.hcSteps || S.nativeStatus?.hcSleep || platform === "ios") ? `<button class="linkbtn small" data-act="nSeed">Demo build: fill ${platform === "ios" ? "Apple Health" : "Health Connect"} with 6 weeks of sample data</button>` : ""}</div>` : ""}
 
-    <div class="card"><h3>What Lueur may notice</h3><p class="small muted">Change your mind any time. Turning a signal off stops using it straight away.</p>
+    <div class="card"><h3>What RyDM may notice</h3><p class="small muted">Change your mind any time. Turning a signal off stops using it straight away.</p>
       ${toggle("sleep", "Sleep", `Duration, bedtime and regularity, ${platform === "ios" ? "from Apple Health" : isNative ? "from Health Connect or this phone" : "from a file you import"}.`)}
       ${toggle("steps", "Movement", `Daily steps${platform === "ios" ? " and active minutes, from Apple Health" : isNative ? ", from Health Connect or this phone" : ", from a file you import"}.`)}
-      ${toggle("places", "Places", isNative ? "Places visited, time at home and how far you range. Each day is reduced to those three numbers and the locations are deleted." : "While Lueur is open, counts different places per day. Coordinates are discarded.")}
+      ${toggle("places", "Places", isNative ? "Places visited, time at home and how far you range. Each day is reduced to those three numbers and the locations are deleted." : "While RyDM is open, counts different places per day. Coordinates are discarded.")}
       ${toggle("checkin", "Daily check-in", "Two taps for mood and energy.")}
       ${platform === "ios" || S.days.some(d => d.restingHR != null || d.hrv != null) ? toggle("heart", "Heart", "Resting heart rate and heart rate variability, from a watch or ring.") : ""}
       ${platform === "ios" || S.days.some(d => d.daylight != null) ? toggle("daylight", "Daylight", "Minutes spent in daylight, measured by Apple Watch.") : ""}
@@ -336,19 +336,19 @@ function privacyScreen() {
         <p class="tiny muted">Kept in memory only while the app is open.</p></details>` : ""}
       ${isLoaded() ? `<p class="small">Running: ${esc(loadedModel())}</p>` : hasWebGPU()
         ? `<button class="btn quiet" data-act="loadModel" data-arg="phone">Download the on-device AI</button>`
-        : `<p class="small">This browser has no WebGPU, so Lueur uses its own fixed wording. Everything else works the same.</p>`}
+        : `<p class="small">This browser has no WebGPU, so RyDM uses its own fixed wording. Everything else works the same.</p>`}
     </div>
 
     <div class="card stack"><h3>Add data</h3>
       <div class="row wrap"><button class="btn quiet" data-act="import">Import a file</button><button class="btn ghost" data-act="demo">Load demo data</button></div>
-      <p class="tiny muted">Fitbit (Kaggle CSV or Google Takeout JSON), Apple Health export.xml, or the Lueur CSV template.</p></div>
+      <p class="tiny muted">Fitbit (Kaggle CSV or Google Takeout JSON), Apple Health export.xml, or the RyDM CSV template.</p></div>
 
     <div class="card stack"><h3>Take it with you, or erase it</h3>
       <div class="row wrap"><button class="btn quiet" data-act="export">Download my data</button><button class="btn ghost" data-act="wipe">Delete everything</button></div></div>
 
     <details class="card soft"><summary><b>Privacy notice</b></summary>
       <dl class="kv small" style="margin-top:10px">
-        <dt>Who</dt><dd>The Lueur team, Geneva {ai} Hackathon 2026. We never receive your data, because there is nowhere to send it.</dd>
+        <dt>Who</dt><dd>The RyDM team, Geneva {ai} Hackathon 2026. We never receive your data, because there is nowhere to send it.</dd>
         <dt>Why</dt><dd>Only to show you changes in your own routine and help you reach support if you choose.</dd>
         <dt>What</dt><dd>The signals you switched on, daily check-ins, tags, your trusted person's name and contact.</dd>
         <dt>Where</dt><dd>This browser on this device (IndexedDB). No cloud, no analytics, no crash reports.</dd>
@@ -357,17 +357,17 @@ function privacyScreen() {
         <dt>Your rights</dt><dd>See, download and delete everything on this screen (FADP Art. 25, 28, 32).</dd>
       </dl></details>
 
-    <details class="card soft"><summary><b>How Lueur follows Swiss rules</b></summary>
+    <details class="card soft"><summary><b>How RyDM follows Swiss rules</b></summary>
       <ul class="list small" style="margin-top:10px">
-        <li><b>Health data is sensitive</b> under the Swiss Federal Act on Data Protection (FADP/nDSG, Art. 5, in force since 1 Sept 2023). Lueur asks for express consent (Art. 6(7)), per signal, and every signal is off until you turn it on.</li>
+        <li><b>Health data is sensitive</b> under the Swiss Federal Act on Data Protection (FADP/nDSG, Art. 5, in force since 1 Sept 2023). RyDM asks for express consent (Art. 6(7)), per signal, and every signal is off until you turn it on.</li>
         <li><b>Privacy by design and by default (Art. 7):</b> processing happens on this device; there is no server that could receive your data. You can see, download and delete all of it.</li>
         <li><b>Data minimisation:</b> places are stored as a daily count only; the AI sees only summary sentences.</li>
         <li><b>AI transparency:</b> the FDPIC says the FADP applies directly to AI and people must know when a machine is writing to them. AI-written text is labelled, the rules that raise a flag are published in plain words, and the AI cannot change them.</li>
-        <li><b>Not a medical device:</b> under the Medical Devices Ordinance and Swissmedic's guidance, software intended to diagnose, monitor or predict a disease is a medical device. Lueur's purpose is general wellbeing: it shows changes in your own routine and signposts support. It never names a condition or gives a score. Any assessment is made by a professional.</li>
-        <li><b>Professional secrecy</b> starts when you choose to talk to a psychologist or doctor; Lueur never contacts anyone for you.</li>
+        <li><b>Not a medical device:</b> under the Medical Devices Ordinance and Swissmedic's guidance, software intended to diagnose, monitor or predict a disease is a medical device. RyDM's purpose is general wellbeing: it shows changes in your own routine and signposts support. It never names a condition or gives a score. Any assessment is made by a professional.</li>
+        <li><b>Professional secrecy</b> starts when you choose to talk to a psychologist or doctor; RyDM never contacts anyone for you.</li>
       </ul></details>
 
-    <p class="tiny muted">Lueur is a prototype from the Geneva {ai} Hackathon 2026 (AGPsy challenge). Open source.</p>
+    <p class="tiny muted">RyDM is a prototype from the Geneva {ai} Hackathon 2026 (AGPsy challenge). Open source.</p>
   </div>`;
 }
 
@@ -380,25 +380,25 @@ function onboarding() {
   const screens = [
     `<div class="hero-art" aria-hidden="true"><div class="sun"></div><div class="hill"></div><div class="hill b"></div></div>
      <div class="stack"><p class="eyebrow">Welcome</p><h1>Notice small shifts early, gently</h1>
-     <p class="muted">Lueur learns your own rhythm of sleep, movement and mood. When it drifts for a while, it tells you kindly and helps you reach someone you trust, at your pace.</p>
-     <div class="card soft small"><b>What Lueur is not.</b> It is not a therapist, it does not diagnose, and it is not for emergencies. If you need help now, call 143 (La Main Tendue) or 144.</div></div>
+     <p class="muted">RyDM learns your own rhythm of sleep, movement and mood. When it drifts for a while, it tells you kindly and helps you reach someone you trust, at your pace.</p>
+     <div class="card soft small"><b>What RyDM is not.</b> It is not a therapist, it does not diagnose, and it is not for emergencies. If you need help now, call 143 (La Main Tendue) or 144.</div></div>
      <button class="btn block" data-act="next">Begin</button>`,
     `<div class="stack"><p class="eyebrow">Your privacy</p><h1>It all stays on this phone</h1>
-     <ul class="list"><li>No account, no server, no cloud. Lueur cannot see your data, and neither can we.</li>
+     <ul class="list"><li>No account, no server, no cloud. RyDM cannot see your data, and neither can we.</li>
      <li>Your employer and insurer can never access it.</li>
      <li>You choose each signal, and can switch it off or delete everything at any time.</li>
      <li>An optional AI runs on the phone itself, only to phrase messages. It never decides anything and its words are always labelled.</li></ul></div>
      <div class="stack"><button class="btn block" data-act="next">Continue</button><button class="linkbtn" data-act="back">Back</button></div>`,
-    `<div class="stack"><p class="eyebrow">Your choice</p><h1>What may Lueur notice?</h1><p class="muted small">Everything starts off. Turn on only what you're comfortable with.</p></div>
+    `<div class="stack"><p class="eyebrow">Your choice</p><h1>What may RyDM notice?</h1><p class="muted small">Everything starts off. Turn on only what you're comfortable with.</p></div>
      <div class="card">
-      ${[["sleep", "Sleep", platform === "ios" ? "From Apple Health: an Apple Watch or any sleep app" : isNative ? "From Health Connect, or estimated from your screen's night-time pattern" : "From a sleep tracker file you import"], ["steps", "Movement", platform === "ios" ? "Steps and active minutes from Apple Health; every iPhone counts steps" : isNative ? "Daily steps from Health Connect or this phone" : "Daily steps, from a file you import"], ...(platform === "ios" ? [["heart", "Heart", "Resting heart rate and heart rate variability, from Apple Watch"], ["daylight", "Daylight", "Minutes in daylight, measured by Apple Watch"]] : []), ["places", "Places", isNative ? "Places visited, time at home and how far you range; never where" : "A daily count while Lueur is open; never where"], ["checkin", "Daily check-in", "Two taps: mood and energy"]].map(([k, t, d]) =>
+      ${[["sleep", "Sleep", platform === "ios" ? "From Apple Health: an Apple Watch or any sleep app" : isNative ? "From Health Connect, or estimated from your screen's night-time pattern" : "From a sleep tracker file you import"], ["steps", "Movement", platform === "ios" ? "Steps and active minutes from Apple Health; every iPhone counts steps" : isNative ? "Daily steps from Health Connect or this phone" : "Daily steps, from a file you import"], ...(platform === "ios" ? [["heart", "Heart", "Resting heart rate and heart rate variability, from Apple Watch"], ["daylight", "Daylight", "Minutes in daylight, measured by Apple Watch"]] : []), ["places", "Places", isNative ? "Places visited, time at home and how far you range; never where" : "A daily count while RyDM is open; never where"], ["checkin", "Daily check-in", "Two taps: mood and energy"]].map(([k, t, d]) =>
         `<div class="toggle-row"><div class="txt"><b>${t}</b><span class="small muted">${d}</span></div><label class="toggle"><input type="checkbox" data-act="consent" data-arg="${k}" ${c[k] ? "checked" : ""} aria-label="${t}"><span></span></label></div>`).join("")}
      </div>
      <label class="row small" style="align-items:flex-start"><input type="checkbox" id="agree" data-act="agree" ${c.agreedAt ? "checked" : ""} style="margin-top:4px;width:20px;height:20px">
-      <span>I agree that Lueur may process these health-related signals on this phone, only to notice changes in my own rhythm. I can withdraw at any time.</span></label>
+      <span>I agree that RyDM may process these health-related signals on this phone, only to notice changes in my own rhythm. I can withdraw at any time.</span></label>
      <div class="stack"><button class="btn block" data-act="next" ${any && c.agreedAt ? "" : "disabled"}>Continue</button><button class="linkbtn" data-act="back">Back</button></div>`,
     `<div class="stack"><p class="eyebrow">Someone in your corner</p><h1>Who would you want alongside you?</h1>
-     <p class="muted">If things shift for a while, Lueur can help you share a short summary with this person, but only when you press share. They are never contacted automatically.</p></div>
+     <p class="muted">If things shift for a while, RyDM can help you share a short summary with this person, but only when you press share. They are never contacted automatically.</p></div>
      <div class="card stack">
       <label class="field">Your first name (optional)<input type="text" id="f-name" value="${esc(S.settings.name)}" autocomplete="given-name"></label>
       <label class="field">Their name<input type="text" id="f-tname" value="${esc(S.settings.trusted.name)}" placeholder="e.g. Sam"></label>
@@ -406,14 +406,14 @@ function onboarding() {
       <label class="row small"><input type="checkbox" id="f-u25" ${S.settings.under25 ? "checked" : ""} style="width:20px;height:20px"> I'm under 25 (shows youth support lines)</label>
      </div>
      <div class="stack"><button class="btn block" data-act="saveTrusted" data-arg="next">Continue</button><button class="linkbtn" data-act="next">Skip for now</button></div>`,
-    `<div class="stack"><p class="eyebrow">Almost there</p><h1>Where should Lueur start?</h1>
-     <p class="muted">Lueur needs about three weeks of history to know your usual. You can bring history in, or try it with example data.</p></div>
+    `<div class="stack"><p class="eyebrow">Almost there</p><h1>Where should RyDM start?</h1>
+     <p class="muted">RyDM needs about three weeks of history to know your usual. You can bring history in, or try it with example data.</p></div>
      <div class="stack">
-      ${isNative ? `<button class="card lake" data-act="nConnect" style="text-align:left;font:inherit;color:inherit;cursor:pointer;border:0"><h3>Use this phone</h3><p class="small">${platform === "ios" ? "Connect Apple Health. Works with just an iPhone, and with an Apple Watch it notices more." : "Connect Health Connect or let Lueur learn from the phone itself, even without a wearable."} Everything stays on the phone.</p></button>` : ""}
+      ${isNative ? `<button class="card lake" data-act="nConnect" style="text-align:left;font:inherit;color:inherit;cursor:pointer;border:0"><h3>Use this phone</h3><p class="small">${platform === "ios" ? "Connect Apple Health. Works with just an iPhone, and with an Apple Watch it notices more." : "Connect Health Connect or let RyDM learn from the phone itself, even without a wearable."} Everything stays on the phone.</p></button>` : ""}
       ${Object.entries(PERSONAS).map(([k, p]) => `<button class="card soft" data-act="demo" data-arg="${k}" style="text-align:left;font:inherit;color:inherit;cursor:pointer"><h3>Try the demo: ${esc(p.label)}</h3><p class="small muted">${esc(p.blurb)}</p></button>`).join("")}
 <button class="card soft" data-act="demo" data-arg="real" style="text-align:left;font:inherit;color:inherit;cursor:pointer"><h3>Try with real data</h3><p class="small muted">Five months of one person's actual Fitbit sleep and steps, with their daily mood and fatigue ratings (PMData, Simula Research Lab, 2020).</p></button>
       <button class="card soft" data-act="import" style="text-align:left;font:inherit;color:inherit;cursor:pointer"><h3>Import my history</h3><p class="small muted">Fitbit, Apple Health, or a CSV. Read on this phone, never uploaded.</p></button>
-      <button class="card soft" data-act="fresh" style="text-align:left;font:inherit;color:inherit;cursor:pointer"><h3>Start fresh</h3><p class="small muted">Begin with daily check-ins and let Lueur learn from today.</p></button>
+      <button class="card soft" data-act="fresh" style="text-align:left;font:inherit;color:inherit;cursor:pointer"><h3>Start fresh</h3><p class="small muted">Begin with daily check-ins and let RyDM learn from today.</p></button>
      </div>
      <button class="linkbtn" data-act="back">Back</button>`,
   ];
@@ -495,7 +495,7 @@ function sheetHTML() {
         <li><b>Fitbit dataset (Kaggle):</b> dailyActivity_merged.csv, sleepDay_merged.csv, minuteSleep_merged.csv</li>
         <li><b>Fitbit via Google Takeout:</b> sleep-*.json and steps-*.json</li>
         <li><b>Apple Health:</b> export.xml from Health › profile › Export All Health Data (unzip first)</li>
-        <li><b>Lueur CSV:</b> columns date, sleep_minutes, bedtime, steps, places, mood, energy</li></ul>
+        <li><b>RyDM CSV:</b> columns date, sleep_minutes, bedtime, steps, places, mood, energy</li></ul>
         <button class="linkbtn" data-act="template">Get the CSV template</button></details>`;
   }
   if (s.type === "demo") {
@@ -511,7 +511,7 @@ function sheetHTML() {
   if (s.type === "pastPlaces") {
     const android = platform === "android";
     body = `<h2>Bring in past places</h2>
-      <p class="muted small">Google keeps your Timeline only on your phone, and no app can read it. You can hand Lueur a copy in about 30 seconds.</p>
+      <p class="muted small">Google keeps your Timeline only on your phone, and no app can read it. You can hand RyDM a copy in about 30 seconds.</p>
       <ol class="list small">
         ${android
           ? `<li>Tap <b>Open Timeline settings</b> below, or go to Settings › Location › Location services › <b>Timeline</b>.</li><li>Tap <b>Export Timeline data</b> and save the file.</li>`
@@ -569,7 +569,7 @@ async function loadDemo(persona) {
 
 async function loadDataset() {
   const text = await (await fetch("data/pmdata-p01.csv")).text();
-  const days = fromLueurCSV(parseCSV(text)).map(d => ({ ...d, source: "dataset" }));
+  const days = fromRyDMCSV(parseCSV(text)).map(d => ({ ...d, source: "dataset" }));
   await clearDays();
   await putDays(days);
   const consent = { ...S.settings.consent, sleep: true, steps: true, checkin: true, agreedAt: S.settings.consent.agreedAt || new Date().toISOString() };
@@ -604,9 +604,9 @@ async function handleFiles(files) {
   let timelineDays = 0;
   if (timeline.length) { const t = fromTimeline(timeline.map(j => j.data)); timelineDays = t.length; days = days.concat(t); }
   if (fitbitJson.length) days = days.concat(fromFitbitTakeout(fitbitJson));
-  const lueur = csvs.filter(c => c.kind === "lueur");
-  lueur.forEach(c => { days = days.concat(fromLueurCSV(c.rows)); });
-  const fitbit = csvs.filter(c => c.kind && c.kind !== "lueur");
+  const rydm = csvs.filter(c => c.kind === "rydm");
+  rydm.forEach(c => { days = days.concat(fromRyDMCSV(c.rows)); });
+  const fitbit = csvs.filter(c => c.kind && c.kind !== "rydm");
   const unknown = csvs.filter(c => !c.kind);
   if (unknown.length) { S.sheet.error = `Didn't recognise ${unknown.map(u => u.name).join(", ")}. See "Which files work?".`; }
   if (fitbit.length) {
@@ -664,7 +664,7 @@ async function act(name, arg, el, ev) {
     case "import": S.sheet = { type: "import" }; render(); break;
     case "files": if (el.files?.length) await handleFiles([...el.files]); break;
     case "pickId": { const id = document.getElementById("pick-id").value; const p = S.sheet.pending; await finishImport(p.days.concat(fromFitbitKaggle(p.fitbit, id)), "Fitbit data"); break; }
-    case "template": { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([TEMPLATE_CSV], { type: "text/csv" })); a.download = "lueur-template.csv"; a.click(); break; }
+    case "template": { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([TEMPLATE_CSV], { type: "text/csv" })); a.download = "rydm-template.csv"; a.click(); break; }
     case "help": case "why": case "breathe": case "pros": case "editTrusted": case "wipe": S.sheet = { type: name }; render(); break;
     case "checkin": { const td = S.days.find(d => d.date === today()) || {}; S.sheet = { type: "checkin", draft: { mood: td.mood, energy: td.energy } }; render(); break; }
     case "pick": { const [k, v] = arg.split(":"); S.sheet.draft[k] = +v; render(); break; }
@@ -675,11 +675,11 @@ async function act(name, arg, el, ev) {
       await upsertDay(today(), { tags: [...tags] }); await refresh({ regenerate: false }); break;
     }
     case "goal": { const done = { ...S.settings.goalsDone }; const t = today(); done[t] = [...new Set([...(done[t] || []), arg])]; await saveSettings({ goalsDone: done }); render(); toast("Nice. That counts."); break; }
-    case "snooze": await saveSettings({ snoozeUntil: addDays(today(), 3) }); native.setPrefs({ snoozeUntil: addDays(today(), 3) }); render(); toast("Okay. Lueur will check in again in a few days."); break;
+    case "snooze": await saveSettings({ snoozeUntil: addDays(today(), 3) }); native.setPrefs({ snoozeUntil: addDays(today(), 3) }); render(); toast("Okay. RyDM will check in again in a few days."); break;
     case "share": S.sheet = { type: "share", arg }; render(); break;
     case "doShare": {
       const text = document.getElementById("share-text").value;
-      if (navigator.share) { try { await navigator.share({ title: "My Lueur summary", text }); } catch {} }
+      if (navigator.share) { try { await navigator.share({ title: "My RyDM summary", text }); } catch {} }
       else { await copy(text); }
       break;
     }
@@ -697,7 +697,7 @@ async function act(name, arg, el, ev) {
       const data = await exportAll();
       const a = document.createElement("a");
       a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
-      a.download = `lueur-export-${today()}.json`; a.click(); break;
+      a.download = `rydm-export-${today()}.json`; a.click(); break;
     }
     case "wipeYes": stopPlaces(); await native.wipe(); await wipeAll(); S.settings = structuredClone(DEFAULTS); S.days = []; S.sheet = null; S.tab = "today"; await kv.set("settings", S.settings); render(); toast("Everything deleted"); break;
     case "nConnect": {

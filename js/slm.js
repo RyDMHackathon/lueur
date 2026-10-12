@@ -29,7 +29,7 @@ export async function loadModel(which = "phone", onProgress) {
   if (!MODELS[which]) which = "phone";
   if (engine) return engine;
   if (loading) return loading;
-  if (!hasWebGPU()) throw new Error("This browser has no WebGPU, so the on-device model can't run here. Lueur will use its built-in wording instead.");
+  if (!hasWebGPU()) throw new Error("This browser has no WebGPU, so the on-device model can't run here. RyDM will use its built-in wording instead.");
   const id = MODELS[which].id;
   loading = (async () => {
     const webllm = await import(WEBLLM_URL);
@@ -104,11 +104,11 @@ export function areasFor(result) {
 }
 
 export function templateMessage(result) {
-  if (result.learning) return "Lueur is still learning what a usual week looks like for you. Keep going as you are; there is nothing to do yet.";
-  if (!result.facts.length) return "Your recent days look close to your usual rhythm. Lueur will keep an eye on things quietly, only on this phone.";
+  if (result.learning) return "RyDM is still learning what a usual week looks like for you. Keep going as you are; there is nothing to do yet.";
+  if (!result.facts.length) return "Your recent days look close to your usual rhythm. RyDM will keep an eye on things quietly, only on this phone.";
   if (result.level === 0) {
     const s = result.signals.find(x => x.status === "mild");
-    return `Your recent days look close to your usual rhythm. ${s ? `There's a small wobble in your ${s.label.toLowerCase()}, well within ordinary ups and downs.` : ""} Nothing to do; Lueur keeps watching quietly.`.replace(/\s+/g, " ");
+    return `Your recent days look close to your usual rhythm. ${s ? `There's a small wobble in your ${s.label.toLowerCase()}, well within ordinary ups and downs.` : ""} Nothing to do; RyDM keeps watching quietly.`.replace(/\s+/g, " ");
   }
   const n = result.facts.length;
   const lead = result.level >= 2

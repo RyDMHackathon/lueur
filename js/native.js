@@ -3,9 +3,9 @@ const X = window.capacitorExports;
 const C = X?.Capacitor || window.Capacitor;
 export const isNative = !!(C && C.isNativePlatform && C.isNativePlatform());
 export const platform = isNative ? C.getPlatform() : "web";
-const P = isNative && X ? X.registerPlugin("LueurHealth") : null;
+const P = isNative && X ? X.registerPlugin("RyDMHealth") : null;
 
-const safe = fn => async (...a) => { if (!P) return null; try { return await fn(...a); } catch (e) { console.warn("LueurHealth", e); return null; } };
+const safe = fn => async (...a) => { if (!P) return null; try { return await fn(...a); } catch (e) { console.warn("RyDMHealth", e); return null; } };
 
 export const native = {
   status: safe(() => P.status()),
@@ -19,7 +19,7 @@ export const native = {
   debugSeed: safe(() => P.debugSeed()),
   requestLocation: safe(() => P.requestLocation()),
   openTimeline: safe(() => P.openTimeline()),
-  // Returns Lueur-shaped days: { date, steps, sleepMin, onset, source }
+  // Returns RyDM-shaped days: { date, steps, sleepMin, onset, source }
   sync: safe(async (days = 60) => {
     const r = await P.sync({ days });
     return (r?.days || []).map(d => {

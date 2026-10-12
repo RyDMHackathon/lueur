@@ -8,10 +8,10 @@ import UserNotifications
 
 // MARK: - Registration
 
-/// Registers the Lueur plugin with the Capacitor bridge.
-class LueurBridgeViewController: CAPBridgeViewController {
+/// Registers the RyDM plugin with the Capacitor bridge.
+class RyDMBridgeViewController: CAPBridgeViewController {
     override open func capacitorDidLoad() {
-        bridge?.registerPluginInstance(LueurHealthPlugin())
+        bridge?.registerPluginInstance(RyDMHealthPlugin())
     }
 }
 
@@ -19,7 +19,7 @@ class LueurBridgeViewController: CAPBridgeViewController {
 
 /// A day is keyed by the date you wake up on. Bedtime ("onset") is minutes after noon of the
 /// previous day, the same convention as js/engine.js (23:30 -> 690, 01:00 -> 780).
-struct LueurDay {
+struct RyDMDay {
     var steps: Double?; var sleepMin: Double?; var onset: Double?
     var restingHR: Double?; var hrv: Double?; var daylight: Double?; var exercise: Double?; var moodHealth: Double?
     var places: Double?; var homeStay: Double?; var rangeKm: Double?
@@ -41,7 +41,7 @@ struct LueurDay {
     }
 }
 
-enum LueurHealth {
+enum RyDMHealth {
     static let store = HKHealthStore()
     static var cal: Calendar { Calendar.current }
 
@@ -131,7 +131,7 @@ enum LueurHealth {
         return acc.mapValues { $0.reduce(0, +) / Double($0.count) }
     }
 
-    static func collect(days: Int) async -> [String: LueurDay] {
+    static func collect(days: Int) async -> [String: RyDMDay] {
         async let steps = daily(.stepCount, unit: .count(), sum: true, days: days)
         async let rhr = daily(.restingHeartRate, unit: HKUnit.count().unitDivided(by: .minute()), sum: false, days: days)
         async let hrv = daily(.heartRateVariabilitySDNN, unit: .secondUnit(with: .milli), sum: false, days: days)
@@ -140,16 +140,16 @@ enum LueurHealth {
         async let exercise = daily(.appleExerciseTime, unit: .minute(), sum: true, days: days)
         var light: [String: Double] = [:]
         if #available(iOS 17.0, *) { light = await daily(.timeInDaylight, unit: .minute(), sum: true, days: days) }
-        var out: [String: LueurDay] = [:]
-        for (k, v) in await steps { out[k, default: LueurDay()].steps = v }
-        for (k, v) in await rhr { out[k, default: LueurDay()].restingHR = v }
-        for (k, v) in await hrv { out[k, default: LueurDay()].hrv = v }
-        for (k, v) in light { out[k, default: LueurDay()].daylight = v }
-        for (k, v) in await exercise { out[k, default: LueurDay()].exercise = v }
-        for (k, v) in await sleep { out[k, default: LueurDay()].sleepMin = v.min; out[k, default: LueurDay()].onset = v.onset }
-        for (k, v) in await mood { out[k, default: LueurDay()].moodHealth = v }
-        for (k, v) in LueurLocation.shared.days {
-            out[k, default: LueurDay()].places = v["places"]; out[k, default: LueurDay()].homeStay = v["homeStay"]; out[k, default: LueurDay()].rangeKm = v["rangeKm"]
+        var out: [String: RyDMDay] = [:]
+        for (k, v) in await steps { out[k, default: RyDMDay()].steps = v }
+        for (k, v) in await rhr { out[k, default: RyDMDay()].restingHR = v }
+        for (k, v) in await hrv { out[k, default: RyDMDay()].hrv = v }
+        for (k, v) in light { out[k, default: RyDMDay()].daylight = v }
+        for (k, v) in await exercise { out[k, default: RyDMDay()].exercise = v }
+        for (k, v) in await sleep { out[k, default: RyDMDay()].sleepMin = v.min; out[k, default: RyDMDay()].onset = v.onset }
+        for (k, v) in await mood { out[k, default: RyDMDay()].moodHealth = v }
+        for (k, v) in RyDMLocation.shared.days {
+            out[k, default: RyDMDay()].places = v["places"]; out[k, default: RyDMDay()].homeStay = v["homeStay"]; out[k, default: RyDMDay()].rangeKm = v["rangeKm"]
         }
         return out
     }
@@ -157,13 +157,13 @@ enum LueurHealth {
 
 // MARK: - Background check (same rules as js/engine.js, sensor signals only)
 
-enum LueurDrift {
+enum RyDMDrift {
     static func median(_ a: [Double]) -> Double { let s = a.sorted(); let m = s.count / 2; return s.count % 2 == 1 ? s[m] : (s[m - 1] + s[m]) / 2 }
 
-    static func shiftedCount(_ days: [String: LueurDay]) -> Int {
+    static func shiftedCount(_ days: [String: RyDMDay]) -> Int {
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
-        func key(_ i: Int) -> String { LueurHealth.dayKey(cal.date(byAdding: .day, value: -i, to: today)!) }
+        func key(_ i: Int) -> String { RyDMHealth.dayKey(cal.date(byAdding: .day, value: -i, to: today)!) }
         func irregular(_ i: Int) -> Double? {
             let v = (0..<7).compactMap { days[key(i + $0)]?.onset }
             guard v.count >= 4 else { return nil }
@@ -199,32 +199,32 @@ enum LueurDrift {
     }
 }
 
-enum LueurNotes {
+enum RyDMNotes {
     static let defaults = UserDefaults.standard
 
     /// Wakes the app when Health gets new sleep or steps, at most about daily.
     static func startBackgroundDelivery() {
-        guard HKHealthStore.isHealthDataAvailable(), defaults.bool(forKey: "lueur.healthRequested") else { return }
+        guard HKHealthStore.isHealthDataAvailable(), defaults.bool(forKey: "rydm.healthRequested") else { return }
         for type in [HKQuantityType(.stepCount), HKCategoryType(.sleepAnalysis)] as [HKSampleType] {
             let q = HKObserverQuery(sampleType: type, predicate: nil) { _, done, _ in
                 Task { await check(); done() }
             }
-            LueurHealth.store.execute(q)
-            LueurHealth.store.enableBackgroundDelivery(for: type, frequency: .daily) { _, _ in }
+            RyDMHealth.store.execute(q)
+            RyDMHealth.store.enableBackgroundDelivery(for: type, frequency: .daily) { _, _ in }
         }
     }
 
     static func check() async {
-        let today = LueurHealth.dayKey(Date())
-        guard defaults.string(forKey: "lueur.lastCheck") != today, Calendar.current.component(.hour, from: Date()) >= 10 else { return }
-        defaults.set(today, forKey: "lueur.lastCheck")
-        if defaults.object(forKey: "lueur.notify") != nil && !defaults.bool(forKey: "lueur.notify") { return }
-        if let s = defaults.string(forKey: "lueur.snoozeUntil"), s > today { return }
-        if let last = defaults.object(forKey: "lueur.lastNotified") as? Date, Date().timeIntervalSince(last) < 7 * 86400 { return }
-        let days = await LueurHealth.collect(days: 45)
-        guard LueurDrift.shiftedCount(days) >= 2 else { return }
+        let today = RyDMHealth.dayKey(Date())
+        guard defaults.string(forKey: "rydm.lastCheck") != today, Calendar.current.component(.hour, from: Date()) >= 10 else { return }
+        defaults.set(today, forKey: "rydm.lastCheck")
+        if defaults.object(forKey: "rydm.notify") != nil && !defaults.bool(forKey: "rydm.notify") { return }
+        if let s = defaults.string(forKey: "rydm.snoozeUntil"), s > today { return }
+        if let last = defaults.object(forKey: "rydm.lastNotified") as? Date, Date().timeIntervalSince(last) < 7 * 86400 { return }
+        let days = await RyDMHealth.collect(days: 45)
+        guard RyDMDrift.shiftedCount(days) >= 2 else { return }
         show()
-        defaults.set(Date(), forKey: "lueur.lastNotified")
+        defaults.set(Date(), forKey: "rydm.lastNotified")
     }
 
     static func show() {
@@ -232,16 +232,16 @@ enum LueurNotes {
         c.title = "Your rhythm has shifted a little lately"
         c.body = "Have a look when you have a moment. Nothing is shared unless you choose to."
         c.interruptionLevel = .passive     // no sound, no banner: lands quietly in Notification Center
-        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "lueur.gentle", content: c, trigger: nil))
+        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "rydm.gentle", content: c, trigger: nil))
     }
 }
 
 // MARK: - Plugin
 
-@objc(LueurHealthPlugin)
-public class LueurHealthPlugin: CAPPlugin, CAPBridgedPlugin {
-    public let identifier = "LueurHealthPlugin"
-    public let jsName = "LueurHealth"
+@objc(RyDMHealthPlugin)
+public class RyDMHealthPlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "RyDMHealthPlugin"
+    public let jsName = "RyDMHealth"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "status", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "requestHealth", returnType: CAPPluginReturnPromise),
@@ -266,25 +266,25 @@ public class LueurHealthPlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func status(_ call: CAPPluginCall) {
         Task {
             let settings = await UNUserNotificationCenter.current().notificationSettings()
-            let days = d.bool(forKey: "lueur.healthRequested") ? await LueurHealth.collect(days: 45) : [:]
+            let days = d.bool(forKey: "rydm.healthRequested") ? await RyDMHealth.collect(days: 45) : [:]
             call.resolve([
                 "platform": "ios",
                 "health": HKHealthStore.isHealthDataAvailable() ? "available" : "unavailable",
                 // iOS never tells apps which read permissions were granted; we only know we asked.
-                "healthRequested": d.bool(forKey: "lueur.healthRequested"),
+                "healthRequested": d.bool(forKey: "rydm.healthRequested"),
                 "notifications": settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional,
                 "debug": isDebug,
-                "location": LueurLocation.shared.status == "always" || LueurLocation.shared.status == "whenInUse",
-                "locationAlways": LueurLocation.shared.status == "always",
-                "sensorShifts": LueurDrift.shiftedCount(days),
+                "location": RyDMLocation.shared.status == "always" || RyDMLocation.shared.status == "whenInUse",
+                "locationAlways": RyDMLocation.shared.status == "always",
+                "sensorShifts": RyDMDrift.shiftedCount(days),
             ])
         }
     }
 
     @objc func requestHealth(_ call: CAPPluginCall) {
         guard HKHealthStore.isHealthDataAvailable() else { call.resolve(["granted": false, "reason": "unavailable"]); return }
-        LueurHealth.store.requestAuthorization(toShare: [], read: LueurHealth.readTypes) { ok, err in
-            if ok { self.d.set(true, forKey: "lueur.healthRequested"); LueurNotes.startBackgroundDelivery() }
+        RyDMHealth.store.requestAuthorization(toShare: [], read: RyDMHealth.readTypes) { ok, err in
+            if ok { self.d.set(true, forKey: "rydm.healthRequested"); RyDMNotes.startBackgroundDelivery() }
             call.resolve(["granted": ok, "error": err?.localizedDescription ?? ""])
         }
     }
@@ -296,21 +296,21 @@ public class LueurHealthPlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func sync(_ call: CAPPluginCall) {
         let n = call.getInt("days") ?? 60
         Task {
-            let days = await LueurHealth.collect(days: n)
+            let days = await RyDMHealth.collect(days: n)
             let arr: [[String: Any]] = days.keys.sorted().map { k in var o = days[k]!.json; o["date"] = k; return o }
             call.resolve(["days": arr])
         }
     }
 
     @objc func setPrefs(_ call: CAPPluginCall) {
-        if let s = call.getString("snoozeUntil") { d.set(s, forKey: "lueur.snoozeUntil") }
-        if let b = call.getBool("notify") { d.set(b, forKey: "lueur.notify") }
+        if let s = call.getString("snoozeUntil") { d.set(s, forKey: "rydm.snoozeUntil") }
+        if let b = call.getBool("notify") { d.set(b, forKey: "rydm.notify") }
         call.resolve()
     }
 
     @objc func requestLocation(_ call: CAPPluginCall) {
         DispatchQueue.main.async {
-            let loc = LueurLocation.shared
+            let loc = RyDMLocation.shared
             if loc.status == "always" { loc.start(); call.resolve(["granted": true]); return }
             if loc.status == "denied" {
                 if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
@@ -321,11 +321,11 @@ public class LueurHealthPlugin: CAPPlugin, CAPBridgedPlugin {
         }
     }
 
-    @objc func previewNotification(_ call: CAPPluginCall) { LueurNotes.show(); call.resolve() }
+    @objc func previewNotification(_ call: CAPPluginCall) { RyDMNotes.show(); call.resolve() }
 
     @objc func wipe(_ call: CAPPluginCall) {
-        for k in ["lueur.healthRequested", "lueur.snoozeUntil", "lueur.notify", "lueur.lastCheck", "lueur.lastNotified"] { d.removeObject(forKey: k) }
-        DispatchQueue.main.async { LueurLocation.shared.wipe() }
+        for k in ["rydm.healthRequested", "rydm.snoozeUntil", "rydm.notify", "rydm.lastCheck", "rydm.lastNotified"] { d.removeObject(forKey: k) }
+        DispatchQueue.main.async { RyDMLocation.shared.wipe() }
         call.resolve()
     }
 
@@ -335,11 +335,11 @@ public class LueurHealthPlugin: CAPPlugin, CAPBridgedPlugin {
         // Exercise minutes and time in daylight are Apple Watch-only: HealthKit refuses app writes for them.
         var share: Set<HKSampleType> = [HKQuantityType(.stepCount), HKCategoryType(.sleepAnalysis), HKQuantityType(.restingHeartRate), HKQuantityType(.heartRateVariabilitySDNN)]
         if #available(iOS 18.0, *) { share.insert(HKSampleType.stateOfMindType()) }
-        LueurHealth.store.requestAuthorization(toShare: share, read: LueurHealth.readTypes) { ok, _ in
+        RyDMHealth.store.requestAuthorization(toShare: share, read: RyDMHealth.readTypes) { ok, _ in
             guard ok else { call.resolve(["seeded": 0]); return }
-            self.d.set(true, forKey: "lueur.healthRequested")
+            self.d.set(true, forKey: "rydm.healthRequested")
             Self.seedLocationDays()
-            LueurHealth.store.save(Self.sampleData()) { saved, err in
+            RyDMHealth.store.save(Self.sampleData()) { saved, err in
                 call.resolve(["seeded": saved ? 42 : 0, "error": err?.localizedDescription ?? ""])
             }
         }
@@ -353,13 +353,13 @@ public class LueurHealthPlugin: CAPPlugin, CAPBridgedPlugin {
             let day = cal.date(byAdding: .day, value: -i, to: today)!
             let p = i <= 21 ? min(1.0, Double(22 - i) / 12.0) : 0
             let we = cal.isDateInWeekend(day)
-            out[LueurHealth.dayKey(day)] = [
+            out[RyDMHealth.dayKey(day)] = [
                 "places": max(1, ((we ? 3.6 : 3.0) * (1 - p * 0.55) + Double.random(in: -0.9...0.9)).rounded()),
                 "homeStay": min(98, (we ? 62 : 55) + p * 28 + Double.random(in: -6...6)).rounded(),
                 "rangeKm": max(0.3, ((we ? 8.0 : 6.0) * (1 - p * 0.6) + Double.random(in: -1.2...1.2)) * 10).rounded() / 10,
             ]
         }
-        UserDefaults.standard.set(out, forKey: "lueur.locDays")
+        UserDefaults.standard.set(out, forKey: "rydm.locDays")
     }
 
     private static func sampleData() -> [HKObject] {
@@ -399,8 +399,8 @@ public class LueurHealthPlugin: CAPPlugin, CAPBridgedPlugin {
 /// battery cost. Points are coarsened to ~110 m and kept only until their day is over; then each day
 /// becomes: places (distinct spots), homeStay (% of the day at home), rangeKm (radius of gyration).
 /// Home is kept only as a salted hash of a coarse cell, never as a place.
-final class LueurLocation: NSObject, CLLocationManagerDelegate {
-    static let shared = LueurLocation()
+final class RyDMLocation: NSObject, CLLocationManagerDelegate {
+    static let shared = RyDMLocation()
     private let lm = CLLocationManager()
     private let d = UserDefaults.standard
     var onAuthChange: (() -> Void)?
@@ -447,8 +447,8 @@ final class LueurLocation: NSObject, CLLocationManagerDelegate {
     // MARK: storage
 
     private func salt() -> String {
-        if let s = d.string(forKey: "lueur.locSalt") { return s }
-        let s = UUID().uuidString; d.set(s, forKey: "lueur.locSalt"); return s
+        if let s = d.string(forKey: "rydm.locSalt") { return s }
+        let s = UUID().uuidString; d.set(s, forKey: "rydm.locSalt"); return s
     }
     private func cell(_ lat: Double, _ lon: Double) -> String {
         let key = "\(salt()):\(String(format: "%.3f", lat)):\(String(format: "%.3f", lon))"
@@ -456,10 +456,10 @@ final class LueurLocation: NSObject, CLLocationManagerDelegate {
     }
 
     private func append(lat: Double, lon: Double, from: Date, to: Date) {
-        var pts = d.array(forKey: "lueur.locPoints") as? [[String: Any]] ?? []
+        var pts = d.array(forKey: "rydm.locPoints") as? [[String: Any]] ?? []
         pts.append(["lat": (lat * 1000).rounded() / 1000, "lon": (lon * 1000).rounded() / 1000,
                     "a": from.timeIntervalSince1970, "b": to.timeIntervalSince1970, "c": cell(lat, lon)])
-        d.set(pts, forKey: "lueur.locPoints")
+        d.set(pts, forKey: "rydm.locPoints")
         reduceFinishedDays()
     }
 
@@ -467,9 +467,9 @@ final class LueurLocation: NSObject, CLLocationManagerDelegate {
     func reduceFinishedDays() {
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
-        var pts = d.array(forKey: "lueur.locPoints") as? [[String: Any]] ?? []
-        var out = d.dictionary(forKey: "lueur.locDays") as? [String: [String: Double]] ?? [:]
-        var votes = d.dictionary(forKey: "lueur.homeVotes") as? [String: Int] ?? [:]
+        var pts = d.array(forKey: "rydm.locPoints") as? [[String: Any]] ?? []
+        var out = d.dictionary(forKey: "rydm.locDays") as? [String: [String: Double]] ?? [:]
+        var votes = d.dictionary(forKey: "rydm.homeVotes") as? [String: Int] ?? [:]
         let byDay = Dictionary(grouping: pts) { cal.startOfDay(for: Date(timeIntervalSince1970: $0["b"] as! Double)) }
         for (day, list) in byDay where day < today {
             let dayEnd = day.addingTimeInterval(86400)
@@ -490,19 +490,19 @@ final class LueurLocation: NSObject, CLLocationManagerDelegate {
             let rg = (zip(lats, lons).map { pow(($0.1 - mLon) * kx, 2) + pow(($0.0 - mLat) * 110.57, 2) }.reduce(0, +) / Double(lats.count)).squareRoot()
             var row: [String: Double] = ["places": Double(Set(list.map { $0["c"] as! String }).count), "rangeKm": (rg * 10).rounded() / 10]
             if home != nil { row["homeStay"] = (100 * homeSecs / 86400).rounded() }
-            out[LueurHealth.dayKey(day)] = row
+            out[RyDMHealth.dayKey(day)] = row
         }
         pts.removeAll { cal.startOfDay(for: Date(timeIntervalSince1970: $0["b"] as! Double)) < today }
         // keep about six months of daily numbers
         let keep = Set(out.keys.sorted().suffix(183))
         out = out.filter { keep.contains($0.key) }
-        d.set(pts, forKey: "lueur.locPoints"); d.set(out, forKey: "lueur.locDays"); d.set(votes, forKey: "lueur.homeVotes")
+        d.set(pts, forKey: "rydm.locPoints"); d.set(out, forKey: "rydm.locDays"); d.set(votes, forKey: "rydm.homeVotes")
     }
 
-    var days: [String: [String: Double]] { reduceFinishedDays(); return d.dictionary(forKey: "lueur.locDays") as? [String: [String: Double]] ?? [:] }
+    var days: [String: [String: Double]] { reduceFinishedDays(); return d.dictionary(forKey: "rydm.locDays") as? [String: [String: Double]] ?? [:] }
 
     func wipe() {
         lm.stopMonitoringVisits(); lm.stopMonitoringSignificantLocationChanges()
-        for k in ["lueur.locPoints", "lueur.locDays", "lueur.homeVotes", "lueur.locSalt"] { d.removeObject(forKey: k) }
+        for k in ["rydm.locPoints", "rydm.locDays", "rydm.homeVotes", "rydm.locSalt"] { d.removeObject(forKey: k) }
     }
 }

@@ -1,4 +1,4 @@
-package ch.lueur.app
+package ch.rydm.app
 
 import java.time.LocalDate
 import kotlin.math.abs

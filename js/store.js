@@ -1,6 +1,6 @@
 // Local-only storage. IndexedDB lives inside this browser profile on this device.
 // There is no server, no account and no sync: nothing here is ever transmitted.
-const DB_NAME = "lueur";
+const DB_NAME = "rydm";
 const DB_VER = 1;
 let dbp;
 
@@ -89,7 +89,7 @@ export async function exportAll() {
   const keys = await req2p(d.transaction("kv").objectStore("kv").getAllKeys());
   const vals = await req2p(d.transaction("kv").objectStore("kv").getAll());
   const settings = Object.fromEntries(keys.map((k, i) => [k, vals[i]]));
-  return { exportedAt: new Date().toISOString(), app: "Lueur", days, settings };
+  return { exportedAt: new Date().toISOString(), app: "RyDM", days, settings };
 }
 
 // Storage limitation: keep about six months. The engine only ever needs the last six weeks.

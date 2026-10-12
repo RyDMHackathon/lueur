@@ -1,8 +1,8 @@
 {
-  "name": "lueur",
+  "name": "rydm",
   "version": "0.2.0",
   "private": true,
-  "description": "Lueur: notices gentle shifts in your own rhythm, on-device.",
+  "description": "RyDM: notices gentle shifts in your own rhythm, on-device.",
   "scripts": {
     "build:web": "node scripts/build-web.js",
     "android:sync": "npm run build:web && npx cap sync android",

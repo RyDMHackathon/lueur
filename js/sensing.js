@@ -1,7 +1,7 @@
 // Places, counted with data minimisation in mind.
 // A web page can only read location while it is open, so this is a light, optional signal.
 // Coordinates are rounded to a ~110 m cell, hashed with a random per-install salt, and only
-// the hash is kept. The raw position is discarded immediately. Lueur can count "how many
+// the hash is kept. The raw position is discarded immediately. RyDM can count "how many
 // different places today", but cannot say where any of them are.
 import { kv, getDay, upsertDay } from "./store.js";
 import { isoDate } from "./engine.js";

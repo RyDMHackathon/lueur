@@ -1,4 +1,4 @@
-package ch.lueur.app
+package ch.rydm.app
 
 import android.app.AppOpsManager
 import android.app.usage.UsageEvents
@@ -31,7 +31,7 @@ import java.time.temporal.ChronoUnit
 import kotlin.coroutines.resume
 
 /**
- * Everything Lueur collects, in one place. All of it stays in this app's private storage.
+ * Everything RyDM collects, in one place. All of it stays in this app's private storage.
  *
  * A day is keyed by the date you wake up on. Bedtime ("onset") is stored as minutes after
  * noon of the previous day, the same convention as engine.js (23:30 -> 690, 01:00 -> 780).
@@ -50,7 +50,7 @@ object Collector {
     )
     const val HISTORY_PERMISSION = "android.permission.health.READ_HEALTH_DATA_HISTORY"
 
-    private fun store(ctx: Context) = File(ctx.filesDir, "lueur_days.json")
+    private fun store(ctx: Context) = File(ctx.filesDir, "rydm_days.json")
     private val zone: ZoneId get() = ZoneId.systemDefault()
 
     fun load(ctx: Context): MutableMap<String, Day> {
@@ -85,7 +85,7 @@ object Collector {
 
     fun wipe(ctx: Context) {
         store(ctx).delete()
-        ctx.getSharedPreferences("lueur", Context.MODE_PRIVATE).edit().clear().apply()
+        ctx.getSharedPreferences("rydm", Context.MODE_PRIVATE).edit().clear().apply()
     }
 
     fun toJson(d: Day): JSONObject = JSONObject().apply {
@@ -238,7 +238,7 @@ object Collector {
                 cont.invokeOnCancellation { sm.unregisterListener(l) }
             }
         } ?: return
-        val prefs = ctx.getSharedPreferences("lueur", Context.MODE_PRIVATE)
+        val prefs = ctx.getSharedPreferences("rydm", Context.MODE_PRIVATE)
         val last = prefs.getFloat("stepCounter", -1f)
         val lastDate = prefs.getString("stepCounterDate", null)
         val today = LocalDate.now().toString()

@@ -1,4 +1,4 @@
-package ch.lueur.app
+package ch.rydm.app
 
 import android.Manifest
 import android.content.Context
@@ -31,7 +31,7 @@ import kotlin.math.sqrt
  */
 object LocationDay {
     private fun file(ctx: Context) = File(ctx.filesDir, "loc_today.json")
-    private fun prefs(ctx: Context) = ctx.getSharedPreferences("lueur", Context.MODE_PRIVATE)
+    private fun prefs(ctx: Context) = ctx.getSharedPreferences("rydm", Context.MODE_PRIVATE)
 
     fun hasPermission(ctx: Context, background: Boolean = true): Boolean {
         val fg = ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
